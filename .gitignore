@@ -1,0 +1,10 @@
+.vs/
+.vscode/
+*.bak
+*.lck
+*.sch-bak
+*.kicad_sch-bak
+*.kicad_pcb-bak
+_autosave*
+*-backups/
+gerber/

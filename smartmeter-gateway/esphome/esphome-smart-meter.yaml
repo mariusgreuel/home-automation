@@ -1,0 +1,331 @@
+﻿esphome:
+  name: esphome-smart-meter
+  friendly_name: "ESPHome Smart Meter"
+  on_boot:
+    then:
+      - pulse_counter.set_total_pulses:
+          id: gas_meter
+          value: !lambda return id(global_gas_meter_total) * 100;
+      - pulse_counter.set_total_pulses:
+          id: water_meter
+          value: !lambda return id(global_water_meter_total) * 100;
+
+esp32:
+  board: seeed_xiao_esp32c3
+  variant: esp32c3
+  framework:
+    type: arduino
+
+wifi:
+  ssid: !secret wifi_ssid
+  password: !secret wifi_password
+
+ota:
+  - platform: esphome
+    password: !secret ota_password
+
+logger:
+  level: INFO
+
+web_server:
+  port: 80
+
+preferences:
+  flash_write_interval: 10min
+
+globals:
+  - id: global_gas_meter_total
+    type: float
+    restore_value: yes
+  - id: global_water_meter_total
+    type: float
+    restore_value: yes
+
+api:
+  encryption:
+    key: !secret api_encryption_key
+  actions:
+    - action: set_gas_meter_total
+      variables:
+        value: float
+      then:
+        - logger.log:
+            level: INFO
+            format: "set_gas_meter_total value=%f"
+            args: [value]
+        - pulse_counter.set_total_pulses:
+            id: gas_meter
+            value: !lambda return value * 100;
+    - action: set_water_meter_total
+      variables:
+        value: float
+      then:
+        - logger.log:
+            level: INFO
+            format: "set_water_meter_total value=%f"
+            args: [value]
+        - pulse_counter.set_total_pulses:
+            id: water_meter
+            value: !lambda return value * 100;
+
+output:
+  - platform: gpio
+    pin: GPIO03 # D1
+    id: led
+
+uart:
+  id: uart_bus
+  rx_pin: GPIO20 # D7
+  baud_rate: 9600
+
+sml:
+  id: smart_meter
+  uart_id: uart_bus
+
+sensor:
+  - platform: uptime
+    name: "Uptime"
+  - platform: wifi_signal
+    name: "WiFi Signal"
+  - platform: pulse_counter
+    id: gas_meter
+    name: "Gasverbrauch"
+    icon: "mdi:meter-gas"
+    pin:
+      number: GPIO06 # D4
+      inverted: true
+      mode:
+        input: true
+        pullup: false
+    update_interval: 30s
+    accuracy_decimals: 0
+    unit_of_measurement: L/min
+    device_class: volume_flow_rate
+    state_class: measurement
+    filters:
+      - multiply: 10
+    total:
+      id: gas_meter_total
+      name: "Gas Zählerstand"
+      icon: "mdi:meter-gas"
+      accuracy_decimals: 2
+      unit_of_measurement: m³
+      device_class: gas
+      state_class: total_increasing
+      filters:
+        - multiply: 0.01
+      on_value:
+        then:
+          - lambda: id(global_gas_meter_total) = x;
+  - platform: pulse_counter
+    id: water_meter
+    name: "Wasserverbrauch"
+    icon: "mdi:water"
+    pin:
+      number: GPIO07 # D5
+      inverted: true
+      mode:
+        input: true
+        pullup: false
+    update_interval: 30s
+    accuracy_decimals: 0
+    unit_of_measurement: L/min
+    device_class: volume_flow_rate
+    state_class: measurement
+    filters:
+      - multiply: 10
+    total:
+      id: water_meter_total
+      name: "Wasser Zählerstand"
+      icon: "mdi:water"
+      accuracy_decimals: 2
+      unit_of_measurement: m³
+      device_class: water
+      state_class: total_increasing
+      filters:
+        - multiply: 0.01
+      on_value:
+        then:
+          - lambda: id(global_water_meter_total) = x;
+  - platform: sml
+    id: enery_consumed_total
+    name: "Zählerstand Bezug"
+    sml_id: smart_meter
+    obis_code: "1-0:1.8.0"
+    accuracy_decimals: 4
+    unit_of_measurement: kWh
+    device_class: energy
+    state_class: total_increasing
+    filters:
+      - multiply: 0.0001
+      - throttle_average: 30s
+  - platform: sml
+    id: enery_produced_total
+    name: "Zählerstand Einspeisung"
+    sml_id: smart_meter
+    obis_code: "1-0:2.8.0"
+    accuracy_decimals: 4
+    unit_of_measurement: kWh
+    device_class: energy
+    state_class: total_increasing
+    filters:
+      - multiply: 0.0001
+      - throttle_average: 30s
+  - platform: sml
+    id: power
+    name: "Wirkleistung"
+    sml_id: smart_meter
+    obis_code: "1-0:16.7.0"
+    accuracy_decimals: 0
+    unit_of_measurement: W
+    device_class: power
+    state_class: measurement
+  - platform: sml
+    id: power_l1
+    name: "Wirkleistung L1"
+    sml_id: smart_meter
+    obis_code: "1-0:36.7.0"
+    accuracy_decimals: 0
+    unit_of_measurement: W
+    device_class: power
+    state_class: measurement
+  - platform: sml
+    id: power_l2
+    name: "Wirkleistung L2"
+    sml_id: smart_meter
+    obis_code: "1-0:56.7.0"
+    accuracy_decimals: 0
+    unit_of_measurement: W
+    device_class: power
+    state_class: measurement
+  - platform: sml
+    id: power_l3
+    name: "Wirkleistung L3"
+    sml_id: smart_meter
+    obis_code: "1-0:76.7.0"
+    accuracy_decimals: 0
+    unit_of_measurement: W
+    device_class: power
+    state_class: measurement
+  - platform: sml
+    id: voltage_l1
+    name: "Spannung L1"
+    sml_id: smart_meter
+    obis_code: "1-0:32.7.0"
+    accuracy_decimals: 1
+    unit_of_measurement: "V"
+    device_class: voltage
+    state_class: measurement
+    filters:
+      - multiply: 0.1
+  - platform: sml
+    id: voltage_l2
+    name: "Spannung L2"
+    sml_id: smart_meter
+    obis_code: "1-0:52.7.0"
+    accuracy_decimals: 1
+    unit_of_measurement: "V"
+    device_class: voltage
+    state_class: measurement
+    filters:
+      - multiply: 0.1
+  - platform: sml
+    id: voltage_l3
+    name: "Spannung L3"
+    sml_id: smart_meter
+    obis_code: "1-0:72.7.0"
+    accuracy_decimals: 1
+    unit_of_measurement: "V"
+    device_class: voltage
+    state_class: measurement
+    filters:
+      - multiply: 0.1
+  - platform: sml
+    id: current_l1
+    name: "Strom L1"
+    sml_id: smart_meter
+    obis_code: "1-0:31.7.0"
+    accuracy_decimals: 2
+    unit_of_measurement: A
+    device_class: current
+    state_class: measurement
+    filters:
+      - multiply: 0.01
+  - platform: sml
+    id: current_l2
+    name: "Strom L2"
+    sml_id: smart_meter
+    obis_code: "1-0:51.7.0"
+    accuracy_decimals: 2
+    unit_of_measurement: A
+    device_class: current
+    state_class: measurement
+    filters:
+      - multiply: 0.01
+  - platform: sml
+    id: current_l3
+    name: "Strom L3"
+    sml_id: smart_meter
+    obis_code: "1-0:71.7.0"
+    accuracy_decimals: 2
+    unit_of_measurement: A
+    device_class: current
+    state_class: measurement
+    filters:
+      - multiply: 0.01
+  - platform: sml
+    id: phase_u2_u1
+    name: "Phasenwinkel U2 zu U1"
+    sml_id: smart_meter
+    obis_code: "1-0:81.7.1"
+    accuracy_decimals: 0
+    unit_of_measurement: °
+    device_class: power_factor
+    state_class: measurement
+  - platform: sml
+    id: phase_u3_u1
+    name: "Phasenwinkel U3 zu U1"
+    sml_id: smart_meter
+    obis_code: "1-0:81.7.2"
+    accuracy_decimals: 0
+    unit_of_measurement: °
+    device_class: power_factor
+    state_class: measurement
+  - platform: sml
+    id: phase_i1_u1
+    name: "Phasenwinkel I1 zu U1"
+    sml_id: smart_meter
+    obis_code: "1-0:81.7.4"
+    accuracy_decimals: 0
+    unit_of_measurement: °
+    device_class: power_factor
+    state_class: measurement
+  - platform: sml
+    id: phase_i2_u2
+    name: "Phasenwinkel I2 zu U2"
+    sml_id: smart_meter
+    obis_code: "1-0:81.7.15"
+    accuracy_decimals: 0
+    unit_of_measurement: °
+    device_class: power_factor
+    state_class: measurement
+  - platform: sml
+    id: phase_i3_u3
+    name: "Phasenwinkel I3 zu U3"
+    sml_id: smart_meter
+    obis_code: "1-0:81.7.26"
+    accuracy_decimals: 0
+    unit_of_measurement: °
+    device_class: power_factor
+    state_class: measurement
+  - platform: sml
+    id: grid_frequency
+    name: "Netzfrequenz"
+    sml_id: smart_meter
+    obis_code: "1-0:14.7.0"
+    accuracy_decimals: 1
+    unit_of_measurement: Hz
+    device_class: frequency
+    state_class: measurement
+    filters:
+      - multiply: 0.1
