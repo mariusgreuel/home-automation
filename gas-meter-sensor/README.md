@@ -8,12 +8,16 @@ you may use this [smart meter gateway](../smartmeter-gateway/).
 
 ## Overview
 
-Finished sensor mounted to the gas meter:
+Sensor top view, with SM353LT hall sensor:
+![Sensor](docs/gas-meter-sensor-top.jpg)
 
+Sensor bottom view, with a glob of hot glue:
+![Sensor](docs/gas-meter-sensor-bottom.jpg)
+
+Sensor mounted to the gas meter:
 ![Sensor](docs/gas-meter-sensor.jpg)
 
 3D model:
-
 ![3D model](docs/gas-meter-sensor-mount.png)
 
 ## Files

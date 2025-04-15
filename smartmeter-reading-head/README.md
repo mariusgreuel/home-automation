@@ -14,16 +14,16 @@ you may use this [smart meter gateway](../smartmeter-gateway/).
 ## Overview
 
 Front view of PCB:
-
 ![Front view of PCB](docs/smartmeter-reading-head-front.png)
 
 Back view of PCB:
-
 ![Back view of PCB](docs/smartmeter-reading-head-back.png)
 
-Cut of reading head 3D printed model:
-
+Section cut of 3D model:
 ![3D model](docs/smartmeter-reading-head.png)
+
+Sensor mounted to the electricity meter:
+![Sensor](docs/smartmeter.jpg)
 
 ## Files
 
